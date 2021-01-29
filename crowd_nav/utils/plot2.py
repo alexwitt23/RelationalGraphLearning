@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-sns.set(style='darkgrid')
+
+sns.set(style="darkgrid")
 
 
 def running_mean(x, n):
@@ -16,18 +17,18 @@ def running_mean(x, n):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('log_files', type=str, nargs='+')
-    parser.add_argument('--plot_sr', default=False, action='store_true')
-    parser.add_argument('--plot_cr', default=False, action='store_true')
-    parser.add_argument('--plot_time', default=False, action='store_true')
-    parser.add_argument('--plot_reward', default=True, action='store_true')
-    parser.add_argument('--plot_train', default=True, action='store_true')
-    parser.add_argument('--plot_val', default=False, action='store_true')
-    parser.add_argument('--plot_all', default=False, action='store_true')
-    parser.add_argument('--window_size', type=int, default=50)
-    parser.add_argument('--models', type=str, default=None)
+    parser.add_argument("log_files", type=str, nargs="+")
+    parser.add_argument("--plot_sr", default=False, action="store_true")
+    parser.add_argument("--plot_cr", default=False, action="store_true")
+    parser.add_argument("--plot_time", default=False, action="store_true")
+    parser.add_argument("--plot_reward", default=True, action="store_true")
+    parser.add_argument("--plot_train", default=True, action="store_true")
+    parser.add_argument("--plot_val", default=False, action="store_true")
+    parser.add_argument("--plot_all", default=False, action="store_true")
+    parser.add_argument("--window_size", type=int, default=50)
+    parser.add_argument("--models", type=str, default=None)
     args = parser.parse_args()
-    args.models = args.models.split(',')
+    args.models = args.models.split(",")
 
     max_episodes = None
     _, ax4 = plt.subplots()
@@ -35,8 +36,13 @@ def main():
     if args.plot_all:
         log_dir = args.log_files[0]
         if not os.path.isdir(log_dir):
-            parser.error('Input argument should be the directory containing all experiment folders')
-        args.log_files = [os.path.join(log_dir, exp_dir, 'output.log') for exp_dir in os.listdir(log_dir)]
+            parser.error(
+                "Input argument should be the directory containing all experiment folders"
+            )
+        args.log_files = [
+            os.path.join(log_dir, exp_dir, "output.log")
+            for exp_dir in os.listdir(log_dir)
+        ]
 
     args.log_files = sorted(args.log_files)
 
@@ -48,7 +54,7 @@ def main():
     for model in models:
         models_dict[model] = list()
 
-    df = pd.DataFrame(columns=['Step', 'Reward', 'Model'])
+    df = pd.DataFrame(columns=["Step", "Reward", "Model"])
     for i, log_file in enumerate(args.log_files):
         # skip models not present
         model = None
@@ -60,7 +66,7 @@ def main():
         if model is None:
             continue
 
-        with open(log_file, 'r') as file:
+        with open(log_file, "r") as file:
             log = file.read()
 
         # val_pattern = r"VAL   in episode (?P<episode>\d+) has success rate: (?P<sr>[0-1].\d+), " \
@@ -78,9 +84,11 @@ def main():
         #     val_time.append(float(r[3]))
         #     val_reward.append(float(r[4]))
 
-        train_pattern = r"TRAIN in episode (?P<episode>\d+)  in epoch (?P<epoch>\d+) has success rate: (?P<sr>[0-1].\d+), " \
-                        r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), " \
-                        r"total reward: (?P<reward>[-+]?\d+.\d+), average return: (?P<return>[-+]?\d+.\d+)"
+        train_pattern = (
+            r"TRAIN in episode (?P<episode>\d+)  in epoch (?P<epoch>\d+) has success rate: (?P<sr>[0-1].\d+), "
+            r"collision rate: (?P<cr>[0-1].\d+), nav time: (?P<time>\d+.\d+), "
+            r"total reward: (?P<reward>[-+]?\d+.\d+), average return: (?P<return>[-+]?\d+.\d+)"
+        )
         train_episode = []
         train_sr = []
         train_cr = []
@@ -110,8 +118,16 @@ def main():
         train_avg_return_smooth = running_mean(train_avg_return, args.window_size)
 
         smoothed_length = len(train_reward_smooth)
-        df = df.append(pd.DataFrame({'Step': range(smoothed_length), 'Reward': train_reward_smooth,
-                                     'Model': [model] * smoothed_length}), ignore_index=True)
+        df = df.append(
+            pd.DataFrame(
+                {
+                    "Step": range(smoothed_length),
+                    "Reward": train_reward_smooth,
+                    "Model": [model] * smoothed_length,
+                }
+            ),
+            ignore_index=True,
+        )
 
         # smoothed_length = len(train_reward_smooth)
         # df = df.append(pd.DataFrame({'Step': range(smoothed_length), 'Reward': train_avg_return_smooth,
@@ -120,13 +136,13 @@ def main():
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(models_dict)
 
-    sns.lineplot(x="Step", y='Reward', data=df, hue='Model', ax=ax4)
+    sns.lineplot(x="Step", y="Reward", data=df, hue="Model", ax=ax4)
 
-    plt.tick_params(axis='both', which='major')
+    plt.tick_params(axis="both", which="major")
     plt.subplots_adjust(left=0.15, right=0.9, top=0.9, bottom=0.125)
 
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

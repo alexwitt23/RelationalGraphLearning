@@ -33,17 +33,17 @@ class RGL(nn.Module):
         self.layerwise_graph = layerwise_graph
         self.skip_connection = skip_connection
 
-        logging.info('Similarity_func: {}'.format(self.similarity_function))
-        logging.info('Layerwise_graph: {}'.format(self.layerwise_graph))
-        logging.info('Skip_connection: {}'.format(self.skip_connection))
-        logging.info('Number of layers: {}'.format(self.num_layer))
+        logging.info("Similarity_func: {}".format(self.similarity_function))
+        logging.info("Layerwise_graph: {}".format(self.layerwise_graph))
+        logging.info("Skip_connection: {}".format(self.skip_connection))
+        logging.info("Number of layers: {}".format(self.num_layer))
 
         self.w_r = mlp(robot_state_dim, wr_dims, last_relu=True)
         self.w_h = mlp(human_state_dim, wh_dims, last_relu=True)
 
-        if self.similarity_function == 'embedded_gaussian':
+        if self.similarity_function == "embedded_gaussian":
             self.w_a = Parameter(torch.randn(self.X_dim, self.X_dim))
-        elif self.similarity_function == 'concatenation':
+        elif self.similarity_function == "concatenation":
             self.w_a = mlp(2 * X_dim, [2 * X_dim, 1], last_relu=True)
 
         # TODO: try other dim size
@@ -61,36 +61,46 @@ class RGL(nn.Module):
         self.A = None
 
     def compute_similarity_matrix(self, X):
-        if self.similarity_function == 'embedded_gaussian':
+        if self.similarity_function == "embedded_gaussian":
             A = torch.matmul(torch.matmul(X, self.w_a), X.permute(0, 2, 1))
             normalized_A = softmax(A, dim=2)
-        elif self.similarity_function == 'gaussian':
+        elif self.similarity_function == "gaussian":
             A = torch.matmul(X, X.permute(0, 2, 1))
             normalized_A = softmax(A, dim=2)
-        elif self.similarity_function == 'cosine':
+        elif self.similarity_function == "cosine":
             A = torch.matmul(X, X.permute(0, 2, 1))
             magnitudes = torch.norm(A, dim=2, keepdim=True)
             norm_matrix = torch.matmul(magnitudes, magnitudes.permute(0, 2, 1))
             normalized_A = torch.div(A, norm_matrix)
-        elif self.similarity_function == 'cosine_softmax':
+        elif self.similarity_function == "cosine_softmax":
             A = torch.matmul(X, X.permute(0, 2, 1))
             magnitudes = torch.norm(A, dim=2, keepdim=True)
             norm_matrix = torch.matmul(magnitudes, magnitudes.permute(0, 2, 1))
             normalized_A = softmax(torch.div(A, norm_matrix), dim=2)
-        elif self.similarity_function == 'concatenation':
-            indices = [pair for pair in itertools.product(list(range(X.size(1))), repeat=2)]
-            selected_features = torch.index_select(X, dim=1, index=torch.LongTensor(indices).reshape(-1))
-            pairwise_features = selected_features.reshape((-1, X.size(1) * X.size(1), X.size(2) * 2))
+        elif self.similarity_function == "concatenation":
+            indices = [
+                pair for pair in itertools.product(list(range(X.size(1))), repeat=2)
+            ]
+            selected_features = torch.index_select(
+                X, dim=1, index=torch.LongTensor(indices).reshape(-1)
+            )
+            pairwise_features = selected_features.reshape(
+                (-1, X.size(1) * X.size(1), X.size(2) * 2)
+            )
             A = self.w_a(pairwise_features).reshape(-1, X.size(1), X.size(1))
             normalized_A = A
-        elif self.similarity_function == 'squared':
+        elif self.similarity_function == "squared":
             A = torch.matmul(X, X.permute(0, 2, 1))
             squared_A = A * A
             normalized_A = squared_A / torch.sum(squared_A, dim=2, keepdim=True)
-        elif self.similarity_function == 'equal_attention':
-            normalized_A = (torch.ones(X.size(1), X.size(1)) / X.size(1)).expand(X.size(0), X.size(1), X.size(1))
-        elif self.similarity_function == 'diagonal':
-            normalized_A = (torch.eye(X.size(1), X.size(1))).expand(X.size(0), X.size(1), X.size(1))
+        elif self.similarity_function == "equal_attention":
+            normalized_A = (torch.ones(X.size(1), X.size(1)) / X.size(1)).expand(
+                X.size(0), X.size(1), X.size(1)
+            )
+        elif self.similarity_function == "diagonal":
+            normalized_A = (torch.eye(X.size(1), X.size(1))).expand(
+                X.size(0), X.size(1), X.size(1)
+            )
         else:
             raise NotImplementedError
 

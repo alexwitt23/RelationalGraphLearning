@@ -14,7 +14,9 @@ class StatePredictor(nn.Module):
         self.trainable = True
         self.kinematics = config.action_space.kinematics
         self.graph_model = graph_model
-        self.human_motion_predictor = mlp(config.gcn.X_dim, config.model_predictive_rl.motion_predictor_dims)
+        self.human_motion_predictor = mlp(
+            config.gcn.X_dim, config.model_predictive_rl.motion_predictor_dims
+        )
         self.time_step = time_step
 
     def forward(self, state, action, detach=False):
@@ -45,15 +47,19 @@ class StatePredictor(nn.Module):
 
         # px, py, vx, vy, radius, gx, gy, v_pref, theta
         next_state = robot_state.clone().squeeze()
-        if self.kinematics == 'holonomic':
+        if self.kinematics == "holonomic":
             next_state[0] = next_state[0] + action.vx * self.time_step
             next_state[1] = next_state[1] + action.vy * self.time_step
             next_state[2] = action.vx
             next_state[3] = action.vy
         else:
             next_state[7] = next_state[7] + action.r
-            next_state[0] = next_state[0] + np.cos(next_state[7]) * action.v * self.time_step
-            next_state[1] = next_state[1] + np.sin(next_state[7]) * action.v * self.time_step
+            next_state[0] = (
+                next_state[0] + np.cos(next_state[7]) * action.v * self.time_step
+            )
+            next_state[1] = (
+                next_state[1] + np.sin(next_state[7]) * action.v * self.time_step
+            )
             next_state[2] = np.cos(next_state[7]) * action.v
             next_state[3] = np.sin(next_state[7]) * action.v
 
@@ -92,15 +98,19 @@ class LinearStatePredictor(object):
 
         # px, py, vx, vy, radius, gx, gy, v_pref, theta
         next_state = robot_state.clone().squeeze()
-        if self.kinematics == 'holonomic':
+        if self.kinematics == "holonomic":
             next_state[0] = next_state[0] + action.vx * self.time_step
             next_state[1] = next_state[1] + action.vy * self.time_step
             next_state[2] = action.vx
             next_state[3] = action.vy
         else:
             next_state[7] = next_state[7] + action.r
-            next_state[0] = next_state[0] + np.cos(next_state[7]) * action.v * self.time_step
-            next_state[1] = next_state[1] + np.sin(next_state[7]) * action.v * self.time_step
+            next_state[0] = (
+                next_state[0] + np.cos(next_state[7]) * action.v * self.time_step
+            )
+            next_state[1] = (
+                next_state[1] + np.sin(next_state[7]) * action.v * self.time_step
+            )
             next_state[2] = np.cos(next_state[7]) * action.v
             next_state[3] = np.sin(next_state[7]) * action.v
 
@@ -116,4 +126,3 @@ class LinearStatePredictor(object):
         next_state[:, 1] = next_state[:, 1] + next_state[:, 3]
 
         return next_state.unsqueeze(0)
-

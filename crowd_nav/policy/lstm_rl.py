@@ -24,8 +24,10 @@ class ValueNetwork1(nn.Module):
         else:
             state = state_input
             lengths = torch.IntTensor([state.size()[1]])
-        self_state = state[:, 0, :self.self_state_dim]
-        packed_sequence = torch.nn.utils.rnn.pack_padded_sequence(state, lengths, batch_first=True)
+        self_state = state[:, 0, : self.self_state_dim]
+        packed_sequence = torch.nn.utils.rnn.pack_padded_sequence(
+            state, lengths, batch_first=True
+        )
         _, (hn, cn) = self.lstm(packed_sequence)
         hn = hn.squeeze(0)
         joint_state = torch.cat([self_state, hn], dim=1)
@@ -55,12 +57,14 @@ class ValueNetwork2(nn.Module):
             lengths = torch.IntTensor([state.size()[1]])
 
         size = state.shape
-        self_state = state[:, 0, :self.self_state_dim]
+        self_state = state[:, 0, : self.self_state_dim]
 
         state = torch.reshape(state, (-1, size[2]))
         mlp1_output = self.mlp1(state)
         mlp1_output = torch.reshape(mlp1_output, (size[0], size[1], -1))
-        packed_mlp1_output = torch.nn.utils.rnn.pack_padded_sequence(mlp1_output, lengths, batch_first=True)
+        packed_mlp1_output = torch.nn.utils.rnn.pack_padded_sequence(
+            mlp1_output, lengths, batch_first=True
+        )
 
         output, (hn, cn) = self.lstm(packed_mlp1_output)
         hn = hn.squeeze(0)
@@ -72,7 +76,7 @@ class ValueNetwork2(nn.Module):
 class LstmRL(MultiHumanRL):
     def __init__(self):
         super().__init__()
-        self.name = 'LSTM-RL'
+        self.name = "LSTM-RL"
         self.with_interaction_module = None
 
     def configure(self, config):
@@ -85,11 +89,23 @@ class LstmRL(MultiHumanRL):
         with_interaction_module = config.lstm_rl.with_interaction_module
         if with_interaction_module:
             mlp1_dims = config.lstm_rl.mlp1_dims
-            self.model = ValueNetwork2(self.input_dim(), self.self_state_dim, mlp1_dims, mlp_dims, global_state_dim)
+            self.model = ValueNetwork2(
+                self.input_dim(),
+                self.self_state_dim,
+                mlp1_dims,
+                mlp_dims,
+                global_state_dim,
+            )
         else:
-            self.model = ValueNetwork1(self.input_dim(), self.self_state_dim, mlp_dims, global_state_dim)
-        logging.info('Policy: {}LSTM-RL {} pairwise interaction module'.format(
-            'OM-' if self.with_om else '', 'w/' if with_interaction_module else 'w/o'))
+            self.model = ValueNetwork1(
+                self.input_dim(), self.self_state_dim, mlp_dims, global_state_dim
+            )
+        logging.info(
+            "Policy: {}LSTM-RL {} pairwise interaction module".format(
+                "OM-" if self.with_om else "",
+                "w/" if with_interaction_module else "w/o",
+            )
+        )
 
     def predict(self, state):
         """
@@ -102,8 +118,9 @@ class LstmRL(MultiHumanRL):
 
         def dist(human):
             # sort human order by decreasing distance to the robot
-            return np.linalg.norm(np.array(human.position) - np.array(state.self_state.position))
+            return np.linalg.norm(
+                np.array(human.position) - np.array(state.self_state.position)
+            )
 
         state.human_states = sorted(state.human_states, key=dist, reverse=True)
         return super().predict(state)
-

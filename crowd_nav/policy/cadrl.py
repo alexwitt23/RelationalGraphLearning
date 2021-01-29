@@ -38,7 +38,7 @@ class ValueNetwork(nn.Module):
 class CADRL(Policy):
     def __init__(self):
         super().__init__()
-        self.name = 'CADRL'
+        self.name = "CADRL"
         self.trainable = True
         self.multiagent_training = None
         self.kinematics = None
@@ -65,7 +65,7 @@ class CADRL(Policy):
         self.set_common_parameters(config)
         self.model = ValueNetwork(self.joint_state_dim, config.cadrl.mlp_dims)
         self.multiagent_training = config.cadrl.multiagent_training
-        logging.info('Policy: CADRL without occupancy map')
+        logging.info("Policy: CADRL without occupancy map")
 
     def set_common_parameters(self, config):
         self.gamma = config.rl.gamma
@@ -79,7 +79,7 @@ class CADRL(Policy):
         self.cell_size = config.om.cell_size
         self.om_channel_size = config.om.om_channel_size
 
-        logging.info('Query environment: {}'.format(self.query_env))
+        logging.info("Query environment: {}".format(self.query_env))
 
     def set_device(self, device):
         self.device = device
@@ -92,17 +92,26 @@ class CADRL(Policy):
         """
         Action space consists of 25 uniformly sampled actions in permitted range and 25 randomly sampled actions.
         """
-        holonomic = True if self.kinematics == 'holonomic' else False
-        speeds = [(np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref for i in range(self.speed_samples)]
+        holonomic = True if self.kinematics == "holonomic" else False
+        speeds = [
+            (np.exp((i + 1) / self.speed_samples) - 1) / (np.e - 1) * v_pref
+            for i in range(self.speed_samples)
+        ]
         if holonomic:
             rotations = np.linspace(0, 2 * np.pi, self.rotation_samples, endpoint=False)
         else:
-            rotations = np.linspace(-self.rotation_constraint, self.rotation_constraint, self.rotation_samples)
+            rotations = np.linspace(
+                -self.rotation_constraint,
+                self.rotation_constraint,
+                self.rotation_samples,
+            )
 
         action_space = [ActionXY(0, 0) if holonomic else ActionRot(0, 0)]
         for rotation, speed in itertools.product(rotations, speeds):
             if holonomic:
-                action_space.append(ActionXY(speed * np.cos(rotation), speed * np.sin(rotation)))
+                action_space.append(
+                    ActionXY(speed * np.cos(rotation), speed * np.sin(rotation))
+                )
             else:
                 action_space.append(ActionRot(speed, rotation))
 
@@ -115,25 +124,45 @@ class CADRL(Policy):
             # propagate state of humans
             next_px = state.px + action.vx * self.time_step
             next_py = state.py + action.vy * self.time_step
-            next_state = ObservableState(next_px, next_py, action.vx, action.vy, state.radius)
+            next_state = ObservableState(
+                next_px, next_py, action.vx, action.vy, state.radius
+            )
         elif isinstance(state, FullState):
             # propagate state of current agent
             # perform action without rotation
-            if self.kinematics == 'holonomic':
+            if self.kinematics == "holonomic":
                 next_px = state.px + action.vx * self.time_step
                 next_py = state.py + action.vy * self.time_step
-                next_state = FullState(next_px, next_py, action.vx, action.vy, state.radius,
-                                       state.gx, state.gy, state.v_pref, state.theta)
+                next_state = FullState(
+                    next_px,
+                    next_py,
+                    action.vx,
+                    action.vy,
+                    state.radius,
+                    state.gx,
+                    state.gy,
+                    state.v_pref,
+                    state.theta,
+                )
             else:
                 next_theta = state.theta + action.r
                 next_vx = action.v * np.cos(next_theta)
                 next_vy = action.v * np.sin(next_theta)
                 next_px = state.px + next_vx * self.time_step
                 next_py = state.py + next_vy * self.time_step
-                next_state = FullState(next_px, next_py, next_vx, next_vy, state.radius, state.gx, state.gy,
-                                       state.v_pref, next_theta)
+                next_state = FullState(
+                    next_px,
+                    next_py,
+                    next_vx,
+                    next_vy,
+                    state.radius,
+                    state.gx,
+                    state.gy,
+                    state.v_pref,
+                    next_theta,
+                )
         else:
-            raise ValueError('Type error')
+            raise ValueError("Type error")
 
         return next_state
 
@@ -146,60 +175,81 @@ class CADRL(Policy):
 
         """
         if self.phase is None or self.device is None:
-            raise AttributeError('Phase, device attributes have to be set!')
-        if self.phase == 'train' and self.epsilon is None:
-            raise AttributeError('Epsilon attribute has to be set in training phase')
+            raise AttributeError("Phase, device attributes have to be set!")
+        if self.phase == "train" and self.epsilon is None:
+            raise AttributeError("Epsilon attribute has to be set in training phase")
 
         if self.reach_destination(state):
-            return ActionXY(0, 0) if self.kinematics == 'holonomic' else ActionRot(0, 0)
+            return ActionXY(0, 0) if self.kinematics == "holonomic" else ActionRot(0, 0)
         if self.action_space is None:
             self.build_action_space(state.self_state.v_pref)
         if not state.human_states:
-            assert self.phase != 'train'
+            assert self.phase != "train"
             return self.select_greedy_action(state.self_state)
 
         probability = np.random.random()
-        if self.phase == 'train' and probability < self.epsilon:
+        if self.phase == "train" and probability < self.epsilon:
             max_action = self.action_space[np.random.choice(len(self.action_space))]
         else:
             self.action_values = list()
-            max_min_value = float('-inf')
+            max_min_value = float("-inf")
             max_action = None
             for action in self.action_space:
                 next_self_state = self.propagate(state.self_state, action)
                 if self.query_env:
-                    next_human_states, reward, done, info = self.env.onestep_lookahead(action)
+                    next_human_states, reward, done, info = self.env.onestep_lookahead(
+                        action
+                    )
                 else:
-                    next_human_states = [self.propagate(human_state, ActionXY(human_state.vx, human_state.vy))
-                                         for human_state in state.human_states]
+                    next_human_states = [
+                        self.propagate(
+                            human_state, ActionXY(human_state.vx, human_state.vy)
+                        )
+                        for human_state in state.human_states
+                    ]
                     reward = self.compute_reward(next_self_state, next_human_states)
-                batch_next_states = torch.cat([torch.Tensor([next_self_state + next_human_state]).to(self.device)
-                                              for next_human_state in next_human_states], dim=0)
+                batch_next_states = torch.cat(
+                    [
+                        torch.Tensor([next_self_state + next_human_state]).to(
+                            self.device
+                        )
+                        for next_human_state in next_human_states
+                    ],
+                    dim=0,
+                )
 
                 # VALUE UPDATE
                 outputs = self.model(self.rotate(batch_next_states))
                 min_output, min_index = torch.min(outputs, 0)
-                min_value = reward + pow(self.gamma, self.time_step * state.self_state.v_pref) * min_output.data.item()
+                min_value = (
+                    reward
+                    + pow(self.gamma, self.time_step * state.self_state.v_pref)
+                    * min_output.data.item()
+                )
                 self.action_values.append(min_value)
                 if min_value > max_min_value:
                     max_min_value = min_value
                     max_action = action
 
-        if self.phase == 'train':
+        if self.phase == "train":
             self.last_state = self.transform(state)
 
         return max_action
 
     def select_greedy_action(self, self_state):
         # find the greedy action given kinematic constraints and return the closest action in the action space
-        direction = np.arctan2(self_state.gy - self_state.py, self_state.gx - self_state.px)
-        distance = np.linalg.norm((self_state.gy - self_state.py, self_state.gx - self_state.px))
-        if self.kinematics == 'holonomic':
+        direction = np.arctan2(
+            self_state.gy - self_state.py, self_state.gx - self_state.px
+        )
+        distance = np.linalg.norm(
+            (self_state.gy - self_state.py, self_state.gx - self_state.px)
+        )
+        if self.kinematics == "holonomic":
             speed = min(distance / self.time_step, self_state.v_pref)
             vx = np.cos(direction) * speed
             vy = np.sin(direction) * speed
 
-            min_diff = float('inf')
+            min_diff = float("inf")
             closest_action = None
             for action in self.action_space:
                 diff = np.linalg.norm(np.array(action) - np.array((vx, vy)))
@@ -216,11 +266,17 @@ class CADRL(Policy):
             else:
                 speed = min(distance / self.time_step, self_state.v_pref)
 
-                min_diff = float('inf')
+                min_diff = float("inf")
                 closest_action = None
                 for action in self.action_space:
-                    diff = np.linalg.norm(np.array((np.cos(action.r) * action.v, np.sin(action.r) * action.v)) -
-                                          np.array((np.cos(rotation) * speed), np.sin(rotation) * action.v))
+                    diff = np.linalg.norm(
+                        np.array(
+                            (np.cos(action.r) * action.v, np.sin(action.r) * action.v)
+                        )
+                        - np.array(
+                            (np.cos(rotation) * speed), np.sin(rotation) * action.v
+                        )
+                    )
                     if diff < min_diff:
                         min_diff = diff
                         closest_action = action
@@ -253,24 +309,63 @@ class CADRL(Policy):
 
         dg = torch.norm(torch.cat([dx, dy], dim=1), 2, dim=1, keepdim=True)
         v_pref = state[:, 7].reshape((batch, -1))
-        vx = (state[:, 2] * torch.cos(rot) + state[:, 3] * torch.sin(rot)).reshape((batch, -1))
-        vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape((batch, -1))
+        vx = (state[:, 2] * torch.cos(rot) + state[:, 3] * torch.sin(rot)).reshape(
+            (batch, -1)
+        )
+        vy = (state[:, 3] * torch.cos(rot) - state[:, 2] * torch.sin(rot)).reshape(
+            (batch, -1)
+        )
 
         radius = state[:, 4].reshape((batch, -1))
-        if self.kinematics == 'unicycle':
+        if self.kinematics == "unicycle":
             theta = (state[:, 8] - rot).reshape((batch, -1))
         else:
             theta = torch.zeros_like(v_pref)
 
-        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape((batch, -1))
-        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape((batch, -1))
-        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (state[:, 10] - state[:, 1]) * torch.sin(rot)
+        vx1 = (state[:, 11] * torch.cos(rot) + state[:, 12] * torch.sin(rot)).reshape(
+            (batch, -1)
+        )
+        vy1 = (state[:, 12] * torch.cos(rot) - state[:, 11] * torch.sin(rot)).reshape(
+            (batch, -1)
+        )
+        px1 = (state[:, 9] - state[:, 0]) * torch.cos(rot) + (
+            state[:, 10] - state[:, 1]
+        ) * torch.sin(rot)
         px1 = px1.reshape((batch, -1))
-        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (state[:, 9] - state[:, 0]) * torch.sin(rot)
+        py1 = (state[:, 10] - state[:, 1]) * torch.cos(rot) - (
+            state[:, 9] - state[:, 0]
+        ) * torch.sin(rot)
         py1 = py1.reshape((batch, -1))
         radius1 = state[:, 13].reshape((batch, -1))
         radius_sum = radius + radius1
-        da = torch.norm(torch.cat([(state[:, 0] - state[:, 9]).reshape((batch, -1)), (state[:, 1] - state[:, 10]).
-                                  reshape((batch, -1))], dim=1), 2, dim=1, keepdim=True)
-        new_state = torch.cat([dg, v_pref, theta, radius, vx, vy, px1, py1, vx1, vy1, radius1, da, radius_sum], dim=1)
+        da = torch.norm(
+            torch.cat(
+                [
+                    (state[:, 0] - state[:, 9]).reshape((batch, -1)),
+                    (state[:, 1] - state[:, 10]).reshape((batch, -1)),
+                ],
+                dim=1,
+            ),
+            2,
+            dim=1,
+            keepdim=True,
+        )
+        new_state = torch.cat(
+            [
+                dg,
+                v_pref,
+                theta,
+                radius,
+                vx,
+                vy,
+                px1,
+                py1,
+                vx1,
+                vy1,
+                radius1,
+                da,
+                radius_sum,
+            ],
+            dim=1,
+        )
         return new_state

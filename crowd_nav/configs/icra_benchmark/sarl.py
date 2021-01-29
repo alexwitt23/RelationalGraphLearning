@@ -1,4 +1,9 @@
-from crowd_nav.configs.icra_benchmark.config import BaseEnvConfig, BasePolicyConfig, BaseTrainConfig, Config
+from crowd_nav.configs.icra_benchmark.config import (
+    BaseEnvConfig,
+    BasePolicyConfig,
+    BaseTrainConfig,
+    Config,
+)
 
 
 class EnvConfig(BaseEnvConfig):
@@ -9,7 +14,7 @@ class EnvConfig(BaseEnvConfig):
 class PolicyConfig(BasePolicyConfig):
     def __init__(self, debug=False):
         super(PolicyConfig, self).__init__(debug)
-        self.name = 'sarl'
+        self.name = "sarl"
 
 
 class TrainConfig(BaseTrainConfig):

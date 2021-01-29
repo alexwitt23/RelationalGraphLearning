@@ -28,8 +28,8 @@ class BaseEnvConfig(object):
     reward.discomfort_penalty_factor = 0.5
 
     sim = Config()
-    sim.train_val_scenario = 'circle_crossing'
-    sim.test_scenario = 'circle_crossing'
+    sim.train_val_scenario = "circle_crossing"
+    sim.test_scenario = "circle_crossing"
     sim.square_width = 20
     sim.circle_radius = 4
     sim.human_num = 5
@@ -38,17 +38,17 @@ class BaseEnvConfig(object):
 
     humans = Config()
     humans.visible = True
-    humans.policy = 'orca'
+    humans.policy = "orca"
     humans.radius = 0.3
     humans.v_pref = 1
-    humans.sensor = 'coordinates'
+    humans.sensor = "coordinates"
 
     robot = Config()
     robot.visible = False
-    robot.policy = 'none'
+    robot.policy = "none"
     robot.radius = 0.3
     robot.v_pref = 1
-    robot.sensor = 'coordinates'
+    robot.sensor = "coordinates"
 
     def __init__(self, debug=False):
         if debug:
@@ -66,10 +66,10 @@ class BasePolicyConfig(object):
     om.om_channel_size = 3
 
     action_space = Config()
-    action_space.kinematics = 'holonomic'
+    action_space.kinematics = "holonomic"
     action_space.speed_samples = 5
     action_space.rotation_samples = 16
-    action_space.sampling = 'exponential'
+    action_space.sampling = "exponential"
     action_space.query_env = False
     action_space.rotation_constraint = np.pi / 3
 
@@ -109,7 +109,7 @@ class BasePolicyConfig(object):
     gcn.final_state_dim = gcn.X_dim
     gcn.gcn2_w1_dim = gcn.X_dim
     gcn.planning_dims = [150, 100, 100, 1]
-    gcn.similarity_function = 'embedded_gaussian'
+    gcn.similarity_function = "embedded_gaussian"
     gcn.layerwise_graph = True
     gcn.skip_connection = False
 
@@ -128,11 +128,11 @@ class BasePolicyConfig(object):
 class BaseTrainConfig(object):
     trainer = Config()
     trainer.batch_size = 100
-    trainer.optimizer = 'Adam'
+    trainer.optimizer = "Adam"
 
     imitation_learning = Config()
     imitation_learning.il_episodes = 2000
-    imitation_learning.il_policy = 'orca'
+    imitation_learning.il_policy = "orca"
     imitation_learning.il_epochs = 50
     imitation_learning.il_learning_rate = 0.001
     imitation_learning.safety_space = 0.15

@@ -6,7 +6,9 @@ class ValueEstimator(nn.Module):
     def __init__(self, config, graph_model):
         super().__init__()
         self.graph_model = graph_model
-        self.value_network = mlp(config.gcn.X_dim, config.model_predictive_rl.value_network_dims)
+        self.value_network = mlp(
+            config.gcn.X_dim, config.model_predictive_rl.value_network_dims
+        )
 
     def forward(self, state):
         """ Embed state into a latent space. Take the first row of the feature matrix as state representation.
